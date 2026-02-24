@@ -567,6 +567,41 @@ def transform():
         
         client = anthropic.Anthropic(api_key=api_key)
         
+        # Define exact platform column structures
+        platform_columns = {
+            'weedmaps': [
+                'name', 'description', 'published', 'external_id', 'product_id',
+                'avatar_image', 'featured', 'categories', 'tags', 'strain',
+                'genetics', 'gallery_images', 'cbd_percentage', 'cbd_milligrams',
+                'thc_percentage', 'thc_milligrams', 'created_at'
+            ],
+            'leafly': [
+                'Leafly Product ID', 'Name', 'SKU', 'Description', 'Category',
+                'Subcategory', 'Strain', 'THC Content', 'THC Unit', 'CBD Content',
+                'CBD Unit', 'Country Availability', 'State/Province Availability',
+                'External Link URL', 'Image One URL', 'Image Two URL',
+                'Image Three URL', 'Image Four URL', 'Image Five URL'
+            ],
+            'iheartjane': [
+                ' ', 'Strain', 'Brand Category',
+                'Does this Product Come in Standard Pack Sizes of 0.5g (500mg) or 1g (1000mg)?',
+                'Pack Size Next Steps', 'Enter Non-Standard Pack Size Here [g]',
+                'Lineage', 'Product Name (Internal Use)', 'Product Description',
+                'IMAGE LINK ONLY (PLEASE ATTACH IMAGES TO EMAIL IF YOU DON\'T HAVE A LINK)',
+                'Jane Use: Click here when product is added', '', ''
+            ],
+            'squarespace': [
+                'Product ID [Non Editable]', 'Variant ID [Non Editable]',
+                'Product Type [Non Editable]', 'Product Page', 'Product URL',
+                'Title', 'Description', 'SKU', 'Option Name 1', 'Option Value 1',
+                'Option Name 2', 'Option Value 2', 'Option Name 3', 'Option Value 3',
+                'Option Name 4', 'Option Value 4', 'Option Name 5', 'Option Value 5',
+                'Option Name 6', 'Option Value 6', 'Price', 'Sale Price', 'On Sale',
+                'Stock', 'Categories', 'Tags', 'Weight', 'Length', 'Width',
+                'Height', 'Visible', 'Hosted Image URLs'
+            ]
+        }
+        
         # Process in batches
         transformed_rows = []
         batch_size = 10
@@ -578,16 +613,21 @@ def transform():
 
 Transform these {len(batch)} products to {platform} format.
 
+EXACT COLUMNS REQUIRED (in this order):
+{json.dumps(platform_columns[platform], indent=2)}
+
 CRITICAL RULES:
 1. Extract (S)=Sativa, (I)=Indica, (H)=Hybrid from product name
-2. Parse descriptions to extract:
+2. Parse descriptions to extract and organize:
    - LINEAGE (genetic cross)
    - TASTE (flavor profile)
    - FEELING (effects)
    - FARM (farm name)
    - PLACE GROWN (location)
-3. For Weedmaps/Leafly/I Heart Jane: Description = LINEAGE + TASTE + FEELING (NO FARM/PLACE)
-4. For Squarespace: Description = LINEAGE + TASTE + FEELING + FARM + PLACE GROWN (KEEP EVERYTHING)
+   - Full marketing description (paragraph about the strain/product)
+3. For Weedmaps/Leafly/I Heart Jane: Description = LINEAGE + TASTE + FEELING + Full marketing description (REMOVE only FARM and PLACE GROWN lines)
+   Example: Keep "LINEAGE: OG x Skunk #1\\nTASTE: Earthy pine, citrus\\nFEELING: Relaxed, focused\\n\\nOGxSkunk1 is a Indica hybrid cannabis strain..." but remove "FARM: Clear Water Farms" and "PLACE GROWN: Humboldt, CA"
+4. For Squarespace: Description = LINEAGE + TASTE + FEELING + FARM + PLACE GROWN + Full marketing description (KEEP EVERYTHING)
 5. Clean strain name = remove product type keywords, keep only strain name
 6. WEIGHT EXTRACTION RULES (CRITICAL):
    - If "5 Pack" or "5-Pack" in name → weight is ALWAYS "2.5g" (total for 5-pack)
@@ -595,20 +635,54 @@ CRITICAL RULES:
 7. Map main category to platform categories using these mappings:
    {json.dumps(PLATFORM_MAPPINGS, indent=2)}
 
-Platform-specific field requirements:
+FIELD MAPPING INSTRUCTIONS FOR {platform.upper()}:
 
-WEEDMAPS: name, categories (mapped), description (no farm), avatar_image, product_id (leave empty), external_id, sku (leave empty), gallery_images, featured (FALSE), tags (from FEELING), thc_percentage, thc_milligrams (leave empty), cbd_percentage (leave empty), cbd_milligrams (leave empty), genetics (type), strain (clean name), items_per_pack (5 for 5-packs, 1 otherwise), msrp (leave empty), weight
+{"WEEDMAPS:" if platform == 'weedmaps' else ""}
+{"- name: Full product name" if platform == 'weedmaps' else ""}
+{"- description: Description without FARM/PLACE" if platform == 'weedmaps' else ""}
+{"- published: TRUE" if platform == 'weedmaps' else ""}
+{"- external_id: Batch number" if platform == 'weedmaps' else ""}
+{"- product_id: (leave empty)" if platform == 'weedmaps' else ""}
+{"- avatar_image: Photo link" if platform == 'weedmaps' else ""}
+{"- featured: FALSE" if platform == 'weedmaps' else ""}
+{"- categories: Mapped category" if platform == 'weedmaps' else ""}
+{"- tags: From FEELING field" if platform == 'weedmaps' else ""}
+{"- strain: Clean strain name" if platform == 'weedmaps' else ""}
+{"- genetics: Sativa/Indica/Hybrid" if platform == 'weedmaps' else ""}
+{"- gallery_images: Photo link" if platform == 'weedmaps' else ""}
+{"- cbd_percentage: (leave empty)" if platform == 'weedmaps' else ""}
+{"- cbd_milligrams: (leave empty)" if platform == 'weedmaps' else ""}
+{"- thc_percentage: THC value without %" if platform == 'weedmaps' else ""}
+{"- thc_milligrams: (leave empty)" if platform == 'weedmaps' else ""}
+{"- created_at: (leave empty)" if platform == 'weedmaps' else ""}
 
-I HEART JANE: ' ' (put 'Nasha'), Strain (clean name), Brand Category (subcategory), Does this Product Come in Standard Pack Sizes of 0.5g (500mg) or 1g (1000mg)? (YES for 0.5g/1g, NO otherwise), Pack Size Next Steps (leave empty if standard), Enter Non-Standard Pack Size Here [g] (put size without 'g' if non-standard), Lineage (type: Sativa/Indica/Hybrid), Product Name (Internal Use) (Nasha | Strain | Category | Weight | Type), Product Description (no farm), IMAGE LINK ONLY (PLEASE ATTACH IMAGES TO EMAIL IF YOU DON'T HAVE A LINK), Jane Use: Click here when product is added (leave empty), '' (leave empty), '' (leave empty)
+{"LEAFLY:" if platform == 'leafly' else ""}
+{"- All 19 columns must be present" if platform == 'leafly' else ""}
+{"- Empty fields: Leafly Product ID, CBD Content, CBD Unit, External Link URL, Image Two/Three/Four/Five URL" if platform == 'leafly' else ""}
+{"- THC Unit: PERCENTAGE" if platform == 'leafly' else ""}
+{"- Country Availability: US" if platform == 'leafly' else ""}
+{"- State/Province Availability: CA" if platform == 'leafly' else ""}
 
-LEAFLY: Leafly Product ID (leave empty), Name, SKU, Description (no farm), Category (mapped), Subcategory (mapped), Strain (clean name), THC Content, THC Unit (PERCENTAGE), CBD Content (leave empty), CBD Unit (leave empty), Country Availability (US), State/Province Availability (CA), External Link URL, Image One URL, Image Two URL (leave empty), Image Three URL (leave empty), Image Four URL (leave empty), Image Five URL (leave empty)
+{"I HEART JANE:" if platform == 'iheartjane' else ""}
+{"- First column ' ': Nasha" if platform == 'iheartjane' else ""}
+{"- Product Name (Internal Use): Nasha | Strain | Category | Weight | Type" if platform == 'iheartjane' else ""}
+{"- Standard Pack Sizes: YES for 0.5g/1g, NO otherwise" if platform == 'iheartjane' else ""}
+{"- Last two columns '': leave empty" if platform == 'iheartjane' else ""}
 
-SQUARESPACE: Product ID [Non Editable] (leave empty), Variant ID [Non Editable] (leave empty), Product Type [Non Editable] (PHYSICAL), Product Page (mapped: hash-library/rosin-library/flower-library/vape-library/infused-preroll-library), Product URL (leave empty), Title (name), Description (WITH FARM - HTML format with <br>), SKU, Option Name 1 (leave empty), Option Value 1 (leave empty), Option Name 2 (leave empty), Option Value 2 (leave empty), Option Name 3 (leave empty), Option Value 3 (leave empty), Price (0.00), Sale Price (0.00), On Sale (No), Stock (Unlimited), Categories (leave empty), Tags (farm name), Weight (0.0), Length (0.0), Width (0.0), Height (0.0), Visible (Yes), Hosted Image URLs
+{"SQUARESPACE:" if platform == 'squarespace' else ""}
+{"- All 32 columns must be present" if platform == 'squarespace' else ""}
+{"- Product Type [Non Editable]: PHYSICAL" if platform == 'squarespace' else ""}
+{"- Description: HTML format with <br> tags, include FARM" if platform == 'squarespace' else ""}
+{"- Price/Sale Price: 0.00" if platform == 'squarespace' else ""}
+{"- On Sale: No" if platform == 'squarespace' else ""}
+{"- Stock: Unlimited" if platform == 'squarespace' else ""}
+{"- Visible: Yes" if platform == 'squarespace' else ""}
+{"- Weight/Length/Width/Height: 0.0" if platform == 'squarespace' else ""}
 
 Products to transform:
 {json.dumps(batch, indent=2)}
 
-Return ONLY a JSON array of objects with exact field names for {platform}. NO markdown."""
+Return ONLY a JSON array of objects. Each object MUST have ALL {len(platform_columns[platform])} columns in the exact order listed above. Use empty string "" for empty fields. NO markdown, NO explanation."""
 
             response = client.messages.create(
                 model="claude-sonnet-4-20250514",
@@ -623,7 +697,16 @@ Return ONLY a JSON array of objects with exact field names for {platform}. NO ma
             json_match = re.search(r'\[.*\]', response_text, re.DOTALL)
             if json_match:
                 batch_transformed = json.loads(json_match.group())
-                transformed_rows.extend(batch_transformed)
+                
+                # Ensure all required columns are present for each row
+                for row in batch_transformed:
+                    for col in platform_columns[platform]:
+                        if col not in row:
+                            row[col] = ''  # Add missing column with empty value
+                    
+                    # Ensure columns are in correct order
+                    ordered_row = {col: row.get(col, '') for col in platform_columns[platform]}
+                    transformed_rows.append(ordered_row)
             else:
                 # Try parsing whole response
                 batch_transformed = json.loads(response_text)
@@ -632,12 +715,12 @@ Return ONLY a JSON array of objects with exact field names for {platform}. NO ma
                 else:
                     transformed_rows.append(batch_transformed)
         
-        # Generate CSV
+        # Generate CSV with exact column order
         if not transformed_rows:
             return jsonify({'error': 'No data transformed'}), 500
         
         output = io.StringIO()
-        writer = csv.DictWriter(output, fieldnames=transformed_rows[0].keys())
+        writer = csv.DictWriter(output, fieldnames=platform_columns[platform])
         writer.writeheader()
         writer.writerows(transformed_rows)
         
