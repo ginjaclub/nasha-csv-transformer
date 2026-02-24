@@ -9,10 +9,74 @@ import csv
 import io
 import json
 import os
+import re
 
 app = Flask(__name__)
 
-# HTML Template
+# Nasha Product Taxonomy
+PRODUCT_TAXONOMY = """
+NASHA PRODUCT CATEGORIES & SUBCATEGORIES:
+
+1. HASH
+   - Green Unpressed Hash
+   - Orange Unpressed Hash
+   - Red Pressed Hash
+   - Blue Pressed Hash
+   - Onyx Live Pressed Hash
+
+2. COLD CURE ROSIN
+   - Cold Cure Live Rosin
+
+3. PACKAGED FLOWER
+   - 3.5g
+   - 7g
+   - 14g
+
+4. VAPE CARTS
+   - 0.5g All-In-One
+   - 1g All-In-One
+   - 510 Vape Cart (future)
+
+5. PREROLLS
+   - Altitude Infused Hash Prerolls
+   - Submerge Infused Hash Prerolls
+   - Live Rosin Infused Prerolls
+
+6. 5-PACK PREROLLS
+   - 5 Pack Hash-Infused Multipack
+   - 5 Pack Live Rosin-Infused Multipack
+
+7. EDIBLES (future)
+"""
+
+# Platform category mappings
+PLATFORM_MAPPINGS = {
+    'weedmaps': {
+        'hash': 'Ice Water Hash, Solventless, Concentrates',
+        'rosin': 'Rosin, Solventless, Concentrates',
+        'flower': 'Flower',
+        'vape-aio': 'Disposable, Vape Pens',
+        'vape-510': 'Cartridge, Vape Pens',
+        'preroll-infused': 'Infused Pre Roll',
+        'preroll-regular': 'Flower'
+    },
+    'leafly': {
+        'hash': {'category': 'Concentrates', 'subcategory': 'Hash'},
+        'rosin': {'category': 'Concentrates', 'subcategory': 'Rosin'},
+        'flower': {'category': 'Cannabis', 'subcategory': 'Flower'},
+        'vape': {'category': 'Vaping', 'subcategory': 'Vape pens'},
+        'preroll': {'category': 'Cannabis', 'subcategory': 'Pre-rolls'}
+    },
+    'squarespace': {
+        'hash': 'hash-library',
+        'rosin': 'rosin-library',
+        'flower': 'flower-library',
+        'vape': 'vape-library',
+        'preroll': 'infused-preroll-library'
+    }
+}
+
+# HTML Template (same as before)
 HTML_TEMPLATE = """
 <!DOCTYPE html>
 <html lang="en">
@@ -221,7 +285,7 @@ HTML_TEMPLATE = """
     <div class="container">
         <div class="header">
             <h1>🤖 Nasha Smart CSV Transformer</h1>
-            <p>AI-powered intelligent data mapping • No manual configuration needed</p>
+            <p>AI-powered intelligent data mapping • Handles all Nasha product categories</p>
         </div>
         
         <div class="content">
@@ -229,10 +293,11 @@ HTML_TEMPLATE = """
                 <h3>🧠 AI-Powered Intelligence:</h3>
                 <ul>
                     <li>Automatically understands your CSV structure</li>
-                    <li>Intelligently detects product categories from context</li>
-                    <li>Extracts structured data from descriptions</li>
+                    <li>Detects all Hash, Rosin, Flower, Vape, and Preroll subcategories</li>
+                    <li>Extracts LINEAGE, TASTE, FEELING from descriptions</li>
+                    <li>Removes FARM info for Weedmaps/Leafly/IHeartJane</li>
+                    <li>Keeps FARM info for Squarespace</li>
                     <li>Works with any column naming convention</li>
-                    <li>No manual mapping required!</li>
                 </ul>
             </div>
             
@@ -371,11 +436,18 @@ HTML_TEMPLATE = """
             formData.append('file', fileInput.files[0]);
             formData.append('platform', platform);
             
+            showStatus('Generating ' + platform + ' CSV...', 'info');
+            
             try {
                 const response = await fetch('/transform', {
                     method: 'POST',
                     body: formData
                 });
+                
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.error || 'Download failed');
+                }
                 
                 const blob = await response.blob();
                 const url = window.URL.createObjectURL(blob);
@@ -401,7 +473,7 @@ def index():
 
 @app.route('/analyze', methods=['POST'])
 def analyze():
-    """AI analyzes the uploaded CSV and returns category breakdown"""
+    """AI analyzes the uploaded CSV and categorizes all products"""
     try:
         file = request.files['file']
         
@@ -413,59 +485,55 @@ def analyze():
         if len(rows) == 0:
             return jsonify({'error': 'No data found in CSV'}), 400
         
-        # Get API key from environment
+        # Get API key
         api_key = os.environ.get('ANTHROPIC_API_KEY')
         if not api_key:
             return jsonify({'error': 'ANTHROPIC_API_KEY not set'}), 500
         
         client = anthropic.Anthropic(api_key=api_key)
         
-        # Sample first 3 products for analysis
-        sample_products = rows[:3]
+        # Analyze ALL products in batches
+        all_analysis = []
+        batch_size = 20
         
-        # Ask Claude to analyze the data structure
-        analysis_prompt = f"""Analyze this product CSV data and for each product determine:
-1. Product category (hash, rosin, vape, preroll, or flower)
-2. Product type (Sativa/Indica/Hybrid) from markers like (S), (I), (H)
+        for i in range(0, len(rows), batch_size):
+            batch = rows[i:i+batch_size]
+            
+            analysis_prompt = f"""{PRODUCT_TAXONOMY}
 
-CSV Headers: {list(rows[0].keys())}
+Analyze these {len(batch)} products. For EACH product, determine:
+1. Main Category: Hash, Rosin, Flower, Vape, Preroll, or 5-Pack Preroll
+2. Subcategory: The specific type from the list above
+3. Type: Sativa/Indica/Hybrid (from (S)/(I)/(H) markers in name)
 
-Sample Products:
-{json.dumps(sample_products, indent=2)}
+Products:
+{json.dumps(batch, indent=2)}
 
-Return a JSON array with one object per product containing:
-- category: one of "hash-green-unpressed", "hash-green-powder", "hash-pressed", "hash-bubble", "hash-temple-ball", "rosin-live", "rosin-cold-cure", "rosin-jar", "vape-cart-live", "vape-cart-cured", "vape-disposable", "preroll-infused", "preroll-infused-5pack", "preroll-regular", "flower"
-- type: "Sativa", "Indica", or "Hybrid"
+Return ONLY a JSON array with one object per product:
+[{{"main_category": "...", "subcategory": "...", "type": "..."}}, ...]
 
-Format: [{{"category": "...", "type": "..."}}, ...]
-"""
-        
-        response = client.messages.create(
-            model="claude-sonnet-4-20250514",
-            max_tokens=1000,
-            messages=[{"role": "user", "content": analysis_prompt}]
-        )
-        
-        # Parse Claude's response
-        analysis_text = response.content[0].text
-        
-        # Extract JSON from response
-        import re
-        json_match = re.search(r'\[.*\]', analysis_text, re.DOTALL)
-        if json_match:
-            analysis = json.loads(json_match.group())
-        else:
-            # Fallback if Claude doesn't return JSON
-            analysis = [{"category": "flower", "type": "Hybrid"} for _ in sample_products]
+NO markdown, NO explanation."""
+            
+            response = client.messages.create(
+                model="claude-sonnet-4-20250514",
+                max_tokens=3000,
+                messages=[{"role": "user", "content": analysis_prompt}]
+            )
+            
+            # Parse response
+            response_text = response.content[0].text.strip()
+            response_text = response_text.replace('```json', '').replace('```', '').strip()
+            
+            json_match = re.search(r'\[.*\]', response_text, re.DOTALL)
+            if json_match:
+                batch_analysis = json.loads(json_match.group())
+                all_analysis.extend(batch_analysis)
         
         # Count categories
         category_counts = {}
-        for item in analysis:
-            cat = item['category']
-            category_counts[cat] = category_counts.get(cat, 0) + 1
-        
-        # Store analysis in session (in production, use Redis or database)
-        # For now, we'll re-analyze on transform
+        for item in all_analysis:
+            subcategory = item.get('subcategory', 'Unknown')
+            category_counts[subcategory] = category_counts.get(subcategory, 0) + 1
         
         return jsonify({
             'total_products': len(rows),
@@ -474,11 +542,15 @@ Format: [{{"category": "...", "type": "..."}}, ...]
         })
         
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        import traceback
+        return jsonify({
+            'error': str(e), 
+            'details': traceback.format_exc()
+        }), 500
 
 @app.route('/transform', methods=['POST'])
 def transform():
-    """Transform the CSV to the requested platform format using AI"""
+    """Transform CSV to platform format using AI"""
     try:
         file = request.files['file']
         platform = request.form['platform']
@@ -495,49 +567,68 @@ def transform():
         
         client = anthropic.Anthropic(api_key=api_key)
         
-        # Define platform schemas
-        platform_schemas = {
-            'weedmaps': ['name', 'categories', 'description', 'avatar_image', 'external_id', 'tags', 'thc_percentage', 'genetics', 'strain', 'items_per_pack', 'weight'],
-            'iheartjane': ['Strain', 'Brand Category', 'Does this Product Come in Standard Pack Sizes of 0.5g (500mg) or 1g (1000mg)?', 'Enter Non-Standard Pack Size Here [g]', 'Lineage', 'Product Name (Internal Use)', 'Product Description', 'IMAGE LINK'],
-            'leafly': ['Name', 'SKU', 'Description', 'Category', 'Subcategory', 'Strain', 'THC Content', 'THC Unit', 'Country Availability', 'State/Province Availability', 'Image One URL'],
-            'squarespace': ['Title', 'Description', 'SKU', 'Product Page', 'Tags', 'Hosted Image URLs']
-        }
-        
-        # Transform each product using AI
+        # Process in batches
         transformed_rows = []
+        batch_size = 10
         
-        for row in rows:
-            # Ask Claude to transform this product
-            transform_prompt = f"""Transform this product data to {platform} format.
+        for i in range(0, len(rows), batch_size):
+            batch = rows[i:i+batch_size]
+            
+            transform_prompt = f"""{PRODUCT_TAXONOMY}
 
-Source Data:
-{json.dumps(row, indent=2)}
+Transform these {len(batch)} products to {platform} format.
 
-Target Platform: {platform}
-Required Fields: {platform_schemas[platform]}
+CRITICAL RULES:
+1. Extract (S)=Sativa, (I)=Indica, (H)=Hybrid from product name
+2. Parse descriptions to extract:
+   - LINEAGE (genetic cross)
+   - TASTE (flavor profile)
+   - FEELING (effects)
+   - FARM (farm name)
+   - PLACE GROWN (location)
+3. For Weedmaps/Leafly/I Heart Jane: Description = LINEAGE + TASTE + FEELING (NO FARM/PLACE)
+4. For Squarespace: Description = LINEAGE + TASTE + FEELING + FARM + PLACE GROWN (KEEP EVERYTHING)
+5. Clean strain name = remove product type keywords, keep only strain name
+6. Extract weight from name (0.5g, 1g, 3.5g, 7g, 14g, etc.)
+7. Map main category to platform categories using these mappings:
+   {json.dumps(PLATFORM_MAPPINGS, indent=2)}
 
-Rules:
-- For Weedmaps/Leafly/I Heart Jane: Description should have LINEAGE, TASTE, FEELING but NO FARM info
-- For Squarespace: Description should include FARM and PLACE GROWN
-- Extract product type (Sativa/Indica/Hybrid) from (S), (I), (H) markers
-- Detect category from product name and description
-- Clean strain name (remove product type keywords)
-- Map image links from available columns
+Platform-specific field requirements:
 
-Return ONLY a JSON object with the exact field names for {platform}."""
+WEEDMAPS: name, categories (mapped), description (no farm), avatar_image, external_id, tags (from FEELING), thc_percentage, genetics (type), strain (clean name), items_per_pack (5 for 5-packs, 1 otherwise), weight
+
+I HEART JANE: Strain (clean name), Brand Category (subcategory), Does this Product Come in Standard Pack Sizes (YES for 0.5g/1g, NO otherwise), Enter Non-Standard Pack Size, Lineage (type: Sativa/Indica/Hybrid), Product Name (Nasha | Strain | Category | Weight | Type), Product Description (no farm), IMAGE LINK
+
+LEAFLY: Name, SKU, Description (no farm), Category (mapped), Subcategory (mapped), Strain (clean name), THC Content, THC Unit (PERCENTAGE), Country Availability (US), State/Province Availability (CA), Image One URL
+
+SQUARESPACE: Title (name), Description (WITH FARM - HTML format with <br>), SKU, Product Page (mapped: hash-library/rosin-library/flower-library/vape-library/infused-preroll-library), Tags (farm name), Hosted Image URLs
+
+Products to transform:
+{json.dumps(batch, indent=2)}
+
+Return ONLY a JSON array of objects with exact field names for {platform}. NO markdown."""
 
             response = client.messages.create(
                 model="claude-sonnet-4-20250514",
-                max_tokens=1500,
+                max_tokens=5000,
                 messages=[{"role": "user", "content": transform_prompt}]
             )
             
             # Parse response
-            response_text = response.content[0].text
-            json_match = re.search(r'\{.*\}', response_text, re.DOTALL)
+            response_text = response.content[0].text.strip()
+            response_text = response_text.replace('```json', '').replace('```', '').strip()
+            
+            json_match = re.search(r'\[.*\]', response_text, re.DOTALL)
             if json_match:
-                transformed = json.loads(json_match.group())
-                transformed_rows.append(transformed)
+                batch_transformed = json.loads(json_match.group())
+                transformed_rows.extend(batch_transformed)
+            else:
+                # Try parsing whole response
+                batch_transformed = json.loads(response_text)
+                if isinstance(batch_transformed, list):
+                    transformed_rows.extend(batch_transformed)
+                else:
+                    transformed_rows.append(batch_transformed)
         
         # Generate CSV
         if not transformed_rows:
@@ -548,7 +639,7 @@ Return ONLY a JSON object with the exact field names for {platform}."""
         writer.writeheader()
         writer.writerows(transformed_rows)
         
-        # Return as downloadable file
+        # Return file
         output.seek(0)
         return send_file(
             io.BytesIO(output.getvalue().encode('utf-8')),
@@ -558,7 +649,11 @@ Return ONLY a JSON object with the exact field names for {platform}."""
         )
         
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        import traceback
+        return jsonify({
+            'error': str(e),
+            'details': traceback.format_exc()
+        }), 500
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
