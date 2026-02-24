@@ -597,13 +597,13 @@ CRITICAL RULES:
 
 Platform-specific field requirements:
 
-WEEDMAPS: name, categories (mapped), description (no farm), avatar_image, external_id, tags (from FEELING), thc_percentage, genetics (type), strain (clean name), items_per_pack (5 for 5-packs, 1 otherwise), weight
+WEEDMAPS: name, categories (mapped), description (no farm), avatar_image, product_id (leave empty), external_id, sku (leave empty), gallery_images, featured (FALSE), tags (from FEELING), thc_percentage, thc_milligrams (leave empty), cbd_percentage (leave empty), cbd_milligrams (leave empty), genetics (type), strain (clean name), items_per_pack (5 for 5-packs, 1 otherwise), msrp (leave empty), weight
 
-I HEART JANE: Strain (clean name), Brand Category (subcategory), Does this Product Come in Standard Pack Sizes (YES for 0.5g/1g, NO otherwise), Enter Non-Standard Pack Size, Lineage (type: Sativa/Indica/Hybrid), Product Name (Nasha | Strain | Category | Weight | Type), Product Description (no farm), IMAGE LINK
+I HEART JANE: ' ' (put 'Nasha'), Strain (clean name), Brand Category (subcategory), Does this Product Come in Standard Pack Sizes of 0.5g (500mg) or 1g (1000mg)? (YES for 0.5g/1g, NO otherwise), Pack Size Next Steps (leave empty if standard), Enter Non-Standard Pack Size Here [g] (put size without 'g' if non-standard), Lineage (type: Sativa/Indica/Hybrid), Product Name (Internal Use) (Nasha | Strain | Category | Weight | Type), Product Description (no farm), IMAGE LINK ONLY (PLEASE ATTACH IMAGES TO EMAIL IF YOU DON'T HAVE A LINK), Jane Use: Click here when product is added (leave empty), '' (leave empty), '' (leave empty)
 
-LEAFLY: Name, SKU, Description (no farm), Category (mapped), Subcategory (mapped), Strain (clean name), THC Content, THC Unit (PERCENTAGE), Country Availability (US), State/Province Availability (CA), Image One URL
+LEAFLY: Leafly Product ID (leave empty), Name, SKU, Description (no farm), Category (mapped), Subcategory (mapped), Strain (clean name), THC Content, THC Unit (PERCENTAGE), CBD Content (leave empty), CBD Unit (leave empty), Country Availability (US), State/Province Availability (CA), External Link URL, Image One URL, Image Two URL (leave empty), Image Three URL (leave empty), Image Four URL (leave empty), Image Five URL (leave empty)
 
-SQUARESPACE: Title (name), Description (WITH FARM - HTML format with <br>), SKU, Product Page (mapped: hash-library/rosin-library/flower-library/vape-library/infused-preroll-library), Tags (farm name), Hosted Image URLs
+SQUARESPACE: Product ID [Non Editable] (leave empty), Variant ID [Non Editable] (leave empty), Product Type [Non Editable] (PHYSICAL), Product Page (mapped: hash-library/rosin-library/flower-library/vape-library/infused-preroll-library), Product URL (leave empty), Title (name), Description (WITH FARM - HTML format with <br>), SKU, Option Name 1 (leave empty), Option Value 1 (leave empty), Option Name 2 (leave empty), Option Value 2 (leave empty), Option Name 3 (leave empty), Option Value 3 (leave empty), Price (0.00), Sale Price (0.00), On Sale (No), Stock (Unlimited), Categories (leave empty), Tags (farm name), Weight (0.0), Length (0.0), Width (0.0), Height (0.0), Visible (Yes), Hosted Image URLs
 
 Products to transform:
 {json.dumps(batch, indent=2)}
