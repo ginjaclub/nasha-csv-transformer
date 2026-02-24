@@ -589,7 +589,9 @@ CRITICAL RULES:
 3. For Weedmaps/Leafly/I Heart Jane: Description = LINEAGE + TASTE + FEELING (NO FARM/PLACE)
 4. For Squarespace: Description = LINEAGE + TASTE + FEELING + FARM + PLACE GROWN (KEEP EVERYTHING)
 5. Clean strain name = remove product type keywords, keep only strain name
-6. Extract weight from name (0.5g, 1g, 3.5g, 7g, 14g, etc.)
+6. WEIGHT EXTRACTION RULES (CRITICAL):
+   - If "5 Pack" or "5-Pack" in name → weight is ALWAYS "2.5g" (total for 5-pack)
+   - Otherwise extract weight from name (0.5g, 1g, 3.5g, 7g, 14g, etc.)
 7. Map main category to platform categories using these mappings:
    {json.dumps(PLATFORM_MAPPINGS, indent=2)}
 
