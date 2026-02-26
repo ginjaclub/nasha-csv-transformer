@@ -570,10 +570,10 @@ def transform():
         # Define exact platform column structures
         platform_columns = {
             'weedmaps': [
-                'name', 'description', 'published', 'external_id', 'product_id',
-                'avatar_image', 'featured', 'categories', 'tags', 'strain',
-                'genetics', 'gallery_images', 'cbd_percentage', 'cbd_milligrams',
-                'thc_percentage', 'thc_milligrams', 'created_at'
+                'name', 'categories', 'description', 'avatar_image', 'product_id',
+                'external_id', 'sku', 'gallery_images', 'featured', 'tags',
+                'thc_percentage', 'thc_milligrams', 'cbd_percentage', 'cbd_milligrams',
+                'genetics', 'strain', 'items_per_pack', 'msrp', 'weight'
             ],
             'leafly': [
                 'Leafly Product ID', 'Name', 'SKU', 'Description', 'Category',
@@ -639,22 +639,24 @@ FIELD MAPPING INSTRUCTIONS FOR {platform.upper()}:
 
 {"WEEDMAPS:" if platform == 'weedmaps' else ""}
 {"- name: Full product name" if platform == 'weedmaps' else ""}
+{"- categories: Mapped category (e.g., 'Ice Water Hash, Solventless, Concentrates')" if platform == 'weedmaps' else ""}
 {"- description: Description without FARM/PLACE" if platform == 'weedmaps' else ""}
-{"- published: TRUE" if platform == 'weedmaps' else ""}
-{"- external_id: Batch number" if platform == 'weedmaps' else ""}
-{"- product_id: (leave empty)" if platform == 'weedmaps' else ""}
 {"- avatar_image: Photo link" if platform == 'weedmaps' else ""}
-{"- featured: FALSE" if platform == 'weedmaps' else ""}
-{"- categories: Mapped category" if platform == 'weedmaps' else ""}
-{"- tags: From FEELING field" if platform == 'weedmaps' else ""}
-{"- strain: Clean strain name" if platform == 'weedmaps' else ""}
-{"- genetics: Sativa/Indica/Hybrid" if platform == 'weedmaps' else ""}
+{"- product_id: (leave empty)" if platform == 'weedmaps' else ""}
+{"- external_id: Batch number" if platform == 'weedmaps' else ""}
+{"- sku: (leave empty)" if platform == 'weedmaps' else ""}
 {"- gallery_images: Photo link" if platform == 'weedmaps' else ""}
-{"- cbd_percentage: (leave empty)" if platform == 'weedmaps' else ""}
-{"- cbd_milligrams: (leave empty)" if platform == 'weedmaps' else ""}
+{"- featured: FALSE" if platform == 'weedmaps' else ""}
+{"- tags: From FEELING field (comma-separated)" if platform == 'weedmaps' else ""}
 {"- thc_percentage: THC value without %" if platform == 'weedmaps' else ""}
 {"- thc_milligrams: (leave empty)" if platform == 'weedmaps' else ""}
-{"- created_at: (leave empty)" if platform == 'weedmaps' else ""}
+{"- cbd_percentage: (leave empty)" if platform == 'weedmaps' else ""}
+{"- cbd_milligrams: (leave empty)" if platform == 'weedmaps' else ""}
+{"- genetics: Sativa/Indica/Hybrid" if platform == 'weedmaps' else ""}
+{"- strain: Clean strain name" if platform == 'weedmaps' else ""}
+{"- items_per_pack: 5 for 5-packs, 1 otherwise" if platform == 'weedmaps' else ""}
+{"- msrp: (leave empty)" if platform == 'weedmaps' else ""}
+{"- weight: Extracted weight (0.5g, 1g, 2.5g, 3.5g, etc.)" if platform == 'weedmaps' else ""}
 
 {"LEAFLY:" if platform == 'leafly' else ""}
 {"- All 19 columns must be present" if platform == 'leafly' else ""}
