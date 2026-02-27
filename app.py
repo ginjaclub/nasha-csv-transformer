@@ -629,11 +629,22 @@ CRITICAL RULES:
    Example: Keep "LINEAGE: OG x Skunk #1\\nTASTE: Earthy pine, citrus\\nFEELING: Relaxed, focused\\n\\nOGxSkunk1 is a Indica hybrid cannabis strain..." but remove "FARM: Clear Water Farms" and "PLACE GROWN: Humboldt, CA"
 4. For Squarespace: Description = LINEAGE + TASTE + FEELING + FARM + PLACE GROWN + Full marketing description (KEEP EVERYTHING)
 5. Clean strain name = remove product type keywords, keep only strain name
+   - For Squarespace Title: Extract ONLY the strain name, remove ALL product type info, weight, farm name
+   - Examples: "Jelly Donutz #117 Green Unpressed Hash (S)" → Title: "Jelly Donutz #117"
+              "Banana OG x GMO Cold Cure Live Rosin" → Title: "Banana OG x GMO"
+              "Moroccan Peaches Live Rosin All-In-One Vape 1g" → Title: "Moroccan Peaches"
 6. WEIGHT EXTRACTION RULES (CRITICAL):
    - If "5 Pack" or "5-Pack" in name → weight is ALWAYS "2.5g" (total for 5-pack)
    - Otherwise extract weight from name (0.5g, 1g, 3.5g, 7g, 14g, etc.)
 7. Map main category to platform categories using these mappings:
    {json.dumps(PLATFORM_MAPPINGS, indent=2)}
+8. FOR SQUARESPACE ONLY - Generate Product URL:
+   - Take clean strain name (e.g., "Acai Mints")
+   - Add farm name if available (e.g., "Whitethorn Valley")
+   - Convert to lowercase, replace spaces with hyphens, remove special characters
+   - Example: "Acai Mints" + "Whitethorn Valley" → "acai-mints-whitethorn-valley"
+   - Example: "Banana OG x GMO" + "Clear Water Farms" → "banana-og-x-gmo-clear-water-farms"
+   - For prerolls with batch numbers: "submerge-batch-28" or "altitude-batch-20"
 
 FIELD MAPPING INSTRUCTIONS FOR {platform.upper()}:
 
@@ -674,12 +685,18 @@ FIELD MAPPING INSTRUCTIONS FOR {platform.upper()}:
 {"SQUARESPACE:" if platform == 'squarespace' else ""}
 {"- All 32 columns must be present" if platform == 'squarespace' else ""}
 {"- Product Type [Non Editable]: PHYSICAL" if platform == 'squarespace' else ""}
-{"- Description: HTML format with <br> tags, include FARM" if platform == 'squarespace' else ""}
+{"- Product Page: Based on category (hash-library, rosin-library, flower-library, vape-library, infused-preroll-library)" if platform == 'squarespace' else ""}
+{"- Product URL: Generate as: strain-name-farm-name (lowercase, hyphens, URL-safe). Example: 'Acai Mints' + 'Whitethorn Valley' = 'acai-mints-whitethorn-valley'" if platform == 'squarespace' else ""}
+{"- Title: Clean strain name ONLY (no product type, no farm). Example: 'Acai Mints', 'Banana OG x GMO'" if platform == 'squarespace' else ""}
+{"- Description: HTML format with <p> and <br> tags. Include FARM and PLACE GROWN. Format: <p class=\"\">LINEAGE: ...<br>TASTE: ...<br>FEELING: ...<br>FARM: ...<br>PLACE GROWN: ...</p><p class=\"\">Full marketing paragraph...</p>" if platform == 'squarespace' else ""}
+{"- Categories: / + first letter of strain name (lowercase). Example: 'Acai Mints' = '/a', 'Banana OG' = '/b'. Use '/category' for names starting with numbers/symbols" if platform == 'squarespace' else ""}
+{"- Tags: Farm name only" if platform == 'squarespace' else ""}
 {"- Price/Sale Price: 0.00" if platform == 'squarespace' else ""}
 {"- On Sale: No" if platform == 'squarespace' else ""}
 {"- Stock: Unlimited" if platform == 'squarespace' else ""}
 {"- Visible: Yes" if platform == 'squarespace' else ""}
 {"- Weight/Length/Width/Height: 0.0" if platform == 'squarespace' else ""}
+{"- All empty fields: leave as empty string" if platform == 'squarespace' else ""}
 
 Products to transform:
 {json.dumps(batch, indent=2)}
