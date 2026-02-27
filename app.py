@@ -619,15 +619,17 @@ EXACT COLUMNS REQUIRED (in this order):
 CRITICAL RULES:
 1. Extract (S)=Sativa, (I)=Indica, (H)=Hybrid from product name
 2. Parse descriptions to extract and organize:
+   - THC (percentage or mg value)
    - LINEAGE (genetic cross)
    - TASTE (flavor profile)
    - FEELING (effects)
    - FARM (farm name)
    - PLACE GROWN (location)
    - Full marketing description (paragraph about the strain/product)
-3. For Weedmaps/Leafly/I Heart Jane: Description = LINEAGE + TASTE + FEELING + Full marketing description (REMOVE only FARM and PLACE GROWN lines)
-   Example: Keep "LINEAGE: OG x Skunk #1\\nTASTE: Earthy pine, citrus\\nFEELING: Relaxed, focused\\n\\nOGxSkunk1 is a Indica hybrid cannabis strain..." but remove "FARM: Clear Water Farms" and "PLACE GROWN: Humboldt, CA"
-4. For Squarespace: Description = LINEAGE + TASTE + FEELING + FARM + PLACE GROWN + Full marketing description (KEEP EVERYTHING)
+3. For Weedmaps/Leafly/I Heart Jane: Description = THC + LINEAGE + TASTE + FEELING + Full marketing description (REMOVE only FARM and PLACE GROWN lines)
+   Example: Keep "THC: 35%\\nLINEAGE: OG x Skunk #1\\nTASTE: Earthy pine, citrus\\nFEELING: Relaxed, focused\\n\\nOGxSkunk1 is a Indica hybrid cannabis strain..." but remove "FARM: Clear Water Farms" and "PLACE GROWN: Humboldt, CA"
+   IMPORTANT: For Leafly, leave THC Content and THC Unit columns EMPTY - keep THC info in description only
+4. For Squarespace: Description = THC + LINEAGE + TASTE + FEELING + FARM + PLACE GROWN + Full marketing description (KEEP EVERYTHING)
 5. Clean strain name = remove product type keywords, keep only strain name
    - For Squarespace Title: Extract ONLY the strain name, remove ALL product type info, weight, farm name
    - Examples: "Jelly Donutz #117 Green Unpressed Hash (S)" → Title: "Jelly Donutz #117"
@@ -671,8 +673,10 @@ FIELD MAPPING INSTRUCTIONS FOR {platform.upper()}:
 
 {"LEAFLY:" if platform == 'leafly' else ""}
 {"- All 19 columns must be present" if platform == 'leafly' else ""}
-{"- Empty fields: Leafly Product ID, CBD Content, CBD Unit, External Link URL, Image Two/Three/Four/Five URL" if platform == 'leafly' else ""}
-{"- THC Unit: PERCENTAGE" if platform == 'leafly' else ""}
+{"- Empty fields: Leafly Product ID, THC Content, THC Unit, CBD Content, CBD Unit, External Link URL, Image Two/Three/Four/Five URL" if platform == 'leafly' else ""}
+{"- THC Content: LEAVE EMPTY (keep THC info in description instead)" if platform == 'leafly' else ""}
+{"- THC Unit: LEAVE EMPTY" if platform == 'leafly' else ""}
+{"- Description: Include THC information along with LINEAGE, TASTE, FEELING (no FARM/PLACE)" if platform == 'leafly' else ""}
 {"- Country Availability: US" if platform == 'leafly' else ""}
 {"- State/Province Availability: CA" if platform == 'leafly' else ""}
 
