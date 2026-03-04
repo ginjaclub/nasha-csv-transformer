@@ -516,7 +516,7 @@ NO markdown, NO explanation."""
             
             response = client.messages.create(
                 model="claude-sonnet-4-20250514",
-                max_tokens=3000,
+                max_tokens=5000,
                 messages=[{"role": "user", "content": analysis_prompt}]
             )
             
@@ -709,7 +709,7 @@ Return ONLY a JSON array of objects. Each object MUST have ALL {len(platform_col
 
             response = client.messages.create(
                 model="claude-sonnet-4-20250514",
-                max_tokens=5000,
+                max_tokens=8000,
                 messages=[{"role": "user", "content": transform_prompt}]
             )
             
