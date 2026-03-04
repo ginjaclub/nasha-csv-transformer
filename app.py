@@ -604,7 +604,7 @@ def transform():
         
         # Process in batches
         transformed_rows = []
-        batch_size = 5
+        batch_size = 3
         
         for i in range(0, len(rows), batch_size):
             batch = rows[i:i+batch_size]
