@@ -742,6 +742,16 @@ Return ONLY a JSON array of objects. Each object MUST have ALL {len(platform_col
         if not transformed_rows:
             return jsonify({'error': 'No data transformed'}), 500
         
+        # Sanitize all data to prevent CSV parsing errors
+        for row in transformed_rows:
+            for key, value in row.items():
+                if isinstance(value, str):
+                    # Remove or escape problematic characters
+                    value = value.replace('"', '""')  # Escape quotes
+                    value = value.replace('\n', ' ')  # Remove newlines
+                    value = value.replace('\r', ' ')  # Remove carriage returns
+                    row[key] = value
+        
         output = io.StringIO()
         writer = csv.DictWriter(output, fieldnames=platform_columns[platform], quoting=csv.QUOTE_ALL)
         writer.writeheader()
