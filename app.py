@@ -743,9 +743,9 @@ Return ONLY a JSON array of objects. Each object MUST have ALL {len(platform_col
             return jsonify({'error': 'No data transformed'}), 500
         
         output = io.StringIO()
-        writer = csv.DictWriter(output, fieldnames=platform_columns[platform])
-        writer.writeheader()
-        writer.writerows(transformed_rows)
+     writer = csv.DictWriter(output, fieldnames=platform_columns[platform], quoting=csv.QUOTE_ALL)
+writer.writeheader()
+writer.writerows(transformed_rows)
         
         # Return file
         output.seek(0)
