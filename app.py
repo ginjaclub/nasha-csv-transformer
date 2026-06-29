@@ -515,7 +515,7 @@ Return ONLY a JSON array with one object per product:
 NO markdown, NO explanation."""
             
             response = client.messages.create(
-                model="claude-sonnet-4-20250514",
+                model="claude-sonnet-4-6",
                 max_tokens=5000,
                 messages=[{"role": "user", "content": analysis_prompt}]
             )
@@ -708,7 +708,7 @@ Products to transform:
 Return ONLY a JSON array of objects. Each object MUST have ALL {len(platform_columns[platform])} columns in the exact order listed above. Use empty string "" for empty fields. NO markdown, NO explanation."""
 
             response = client.messages.create(
-                model="claude-sonnet-4-20250514",
+                model="claude-sonnet-4-6",
                 max_tokens=8000,
                 messages=[{"role": "user", "content": transform_prompt}]
             )
